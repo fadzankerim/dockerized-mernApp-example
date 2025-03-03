@@ -1,0 +1,86 @@
+#specifiying the version of docker compose
+version: '3.8'
+
+
+#defining the services
+services:
+  #defining the frontend services
+  web:
+  #defining what services the frontend will use
+    #the api service needs to be started before the web service
+    depends_on:
+      -api
+      #defining the build 
+    build: ./frontend
+    #defining the ports that the frontend will use
+    #the first number is the port of the host machine 
+    #the second number is the port of the container
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL= http://api:8000
+    #this part is for compose watch mode
+    #anthing metioned below develop will be watched for changes by docker compose
+    develop:
+      watch:
+        - path: ./frontend/package.json
+          action: rebuild
+        - path: ./frontend/package-lock.json
+          action: rebuild
+
+          #i need to watch for the changes in the frontend dir and sync the changes 
+        - path: ./frontend
+          target: app
+          action: sync
+
+  api:
+    #the api service depends on the db service so my goal is to start the db service before the api service
+    depends_on:
+      - db
+
+    #defining the build for the api service
+    build: ./backend
+
+    #then i need to define the ports that the api service will use
+    #the first number is for the host machine
+    #second number is for the container
+    ports:
+      - "8000:8000"
+    
+    #next i need to give the env for the api service
+    #for this purpose i am using a local mongodb instance
+    environment:
+      MONGODB_URI= mongodb://db:kera
+    
+    #again anything mentioned under develop will be watched for changes by docker compose
+    develop:
+      watch:
+        - path: ./backend/package.json
+          action: rebuild
+        - path: ./backend/package-lock.json
+          action: rebuild
+
+          #sync any changes in the backend folder 
+        - path: ./backend
+          target: app
+          action: sync
+  
+  db:
+    #defining the image for the db instance
+    #i will be using a image from docker hub the mongodb image 
+    image: mongo:latest
+
+    #now i need to define the ports, i will be using the default local ports 
+    #the first number is for the host machine
+    #the second number is for the container
+    ports:
+      - "27017:27017"
+    
+
+    #i need to specify the volumes for the db instance
+    #i will be using a local mongodb instance
+    volumes:
+      - kera:/data/db
+
+  volumes:
+    kera:
